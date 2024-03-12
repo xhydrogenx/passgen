@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Jost:ital,wght@0,100..900;1,100..900&display=swap"
+          rel="stylesheet">
+    <title>Генератор паролей</title>
+    <style>
+        body {
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            height: 100vh;
+            width: auto;
+            margin: 0;
+            background-color: #f0f0f0;
+            font-family: 'Jost';
+        }
+
+        .password-generator {
+            background-color: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); /* Увеличено до 300px */
+            gap: 20px;
+            align-items: center;
+        }
+
+        .password-display {
+            display: flex;
+            align-items: center;
+            justify-content: space-between; /* Используйте это для распределения пространства между элементами */
+            width: 100%; /* Убедитесь, что контейнер занимает всю доступную ширину */
+            margin-bottom: 10px;
+        }
+
+        .option-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .length-slider-container {
+            display: flex;
+            align-items: center;
+            width: 100%;
+            margin-bottom: 10px;
+        }
+
+        .length-slider-container span {
+            margin-right: 10px;
+        }
+
+        .toast {
+            visibility: hidden;
+            min-width: 250px;
+            background-color: rgba(0, 0, 0, 0.7);
+            color: #fff;
+            text-align: center;
+            border-radius: 2px;
+            padding: 16px;
+            position: fixed;
+            z-index: 1;
+            bottom: 30px;
+            font-size: 17px;
+        }
+
+        .show {
+            visibility: visible;
+        }
+
+        .unselectable {
+            -webkit-touch-callout: none;
+            -webkit-user-select: none;
+            -khtml-user-select: none;
+            -moz-user-select: none;
+            -ms-user-select: none;
+            user-select: none;
+        }
+
+        #password {
+            margin: 10px
+        }
+
+        #check-security {
+            margin: 10px;
+        }
+
+        #generate {
+            margin: 10px;
+        }
+
+        #length {
+            width: 100%;
+        }
+
+        #password {
+            height: 2em; /* Пример высоты поля ввода */
+        }
+
+        #copy {
+            height: 38px; /* Установка высоты кнопки равной высоте поля ввода */
+            width: 100px; /* Задайте желаемую ширину */
+        }
+
+    </style>
+</head>
+<body>
+<div class="password-generator">
+    <select id="language" class="px-4 py-2 mt-4 w-full outline-none ring-2 ring-black rounded">
+        <option value="en">Английский</option>
+        <option value="ru">Русский</option>
+    </select>
+    <div class="option-row">
+        <label for="special-chars">Использовать спецсимволы</label>
+        <input type="checkbox" id="special-chars"
+               class="before:content[''] peer relative h-5 w-5 cursor-pointer appearance-none rounded-md border border-blue-gray-200 transition-all before:absolute before:top-2/4 before:left-2/4 before:block before:h-12 before:w-12 before:-translate-y-2/4 before:-translate-x-2/4 before:rounded-full before:bg-blue-gray-500 before:opacity-0 before:transition-opacity checked:border-blue-500 checked:bg-blue-500 checked:before:bg-blue-500 hover:before:opacity-10">
+    </div>
+    <div class="option-row">
+        <label for="uppercase">Использовать верхний регистр</label>
+        <input type="checkbox" id="uppercase"
+               class="before:content[''] peer relative h-5 w-5 cursor-pointer appearance-none rounded-md border border-blue-gray-200 transition-all before:absolute before:top-2/4 before:left-2/4 before:block before:h-12 before:w-12 before:-translate-y-2/4 before:-translate-x-2/4 before:rounded-full before:bg-blue-gray-500 before:opacity-0 before:transition-opacity checked:border-blue-500 checked:bg-blue-500 checked:before:bg-blue-500 hover:before:opacity-10">
+    </div>
+    <div class="length-slider-container">
+        <span id="length-display">12</span>
+        <input type="range" id="length" min="8" max="64" value="12">
+    </div>
+    <div class="password-display">
+        <input type="text" id="password"
+               class="px-4 py-2 mt-4 w-full outline-none ring-2 ring-black rounded unselectable" readonly>
+        <button id="copy" class="bg-green-500 text-white border border-green-500 rounded">Копировать</button>
+    </div>
+
+    <button id="generate" class="px-6 py-3 mb-4 text-white bg-black border border-black rounded">Сгенерировать</button>
+    <button id="check-security" class="px-6 py-3 mb-4 text-white bg-black border border-black rounded">Проверить на
+        безопасность
+    </button>
+    <div id="security-message"></div>
+    <div id="toast" class="toast">
+        <p>Пароль скопирован в буфер обмена</p>
+    </div>
+</div>
+
+<script>
+    document.getElementById('length').addEventListener('input', function () {
+        document.getElementById('length-display').textContent = this.value;
+    });
+
+    document.getElementById('copy').addEventListener('click', function () {
+        document.getElementById('password').select();
+        document.execCommand('copy');
+    });
+
+    document.getElementById('generate').addEventListener('click', function () {
+        const length = document.getElementById('length').value;
+        const specialchars = document.getElementById('special-chars').checked;
+        const uppercase = document.getElementById('uppercase').checked;
+        const language = document.getElementById('language').value;
+
+        const url = new URL("http://localhost:8000/keys/generate-password");
+        url.searchParams.append("length", length);
+        url.searchParams.append("use_special_chars", specialchars);
+        url.searchParams.append("use_uppercase", uppercase);
+        url.searchParams.append("language", language);
+
+        fetch(url)
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    alert(data.error);
+                } else {
+                    document.getElementById('password').value = data.password;
+                }
+            })
+            .catch(error => console.error('Error:', error));
+    });
+    document.getElementById('copy').addEventListener('click', function () {
+        const passwordInput = document.getElementById('password');
+        passwordInput.select();
+        document.execCommand('copy');
+
+        // Изменить текст на кнопке на галочку
+        this.textContent = '✓';
+        var toast = document.getElementById("toast");
+        toast.className = "toast show";
+        setTimeout(function () {
+            toast.className = toast.className.replace("show", "");
+        }, 3000);
+        setTimeout(() => {
+            this.textContent = 'Копировать';
+        }, 3000);
+    });
+    document.getElementById("password").addEventListener("mousedown", function (event) {
+        event.preventDefault();
+    });
+    var passwordInput = document.getElementById('password');
+
+    passwordInput.addEventListener('select', function () {
+        this.selectionStart = this.selectionEnd;
+    }, false);
+
+    function checkPasswordStrength(password) {
+        let score = 0;
+        if (password.length >= 8 && password.length <= 20) {
+            score++;
+        }
+        if (password.match(/[A-Z]/)) {
+            score++;
+        }
+        if (password.match(/[a-z]/)) {
+            score++;
+        }
+        if (password.match(/[0-9]/)) {
+            score++;
+        }
+        if (password.match(/[^A-Za-z0-9]/)) {
+            score++;
+        }
+        return score;
+    }
+
+    const password = "YourPassword123!";
+    const strength = checkPasswordStrength(password);
+    console.log(`Password strength: ${strength}`);
+</script>
+</body>
+</html>
